@@ -9,7 +9,7 @@ Here are my renders:
 ------------
 Rough Mirror Box Uniform with Li Naive
 
-![](mirrornaive.png)
+![](roughnaive.png)
 
 Two Lights Boxes with MIS
 
@@ -17,7 +17,7 @@ Two Lights Boxes with MIS
 
 Rough Mirror Box Uniform with MIS
 
-![](mirrormis.png)
+![](roughmis.png)
 
 Veach Scene with Li Naive
 
