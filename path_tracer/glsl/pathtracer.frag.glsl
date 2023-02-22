@@ -27,9 +27,6 @@ vec3 Li_Direct(Ray ray) {
     vec3 direct_light = Sample_Li(ray.origin + isect.t * ray.direction, isect.nor, wiW, pdf, chosenLightIdx, chosenLightID);
     vec3 f = f(isect, -ray.direction, wiW);
 
-//    if (pdf == 0.f) {
-//        return isect.Le;
-//    }
     return f*direct_light*AbsDot(wiW, isect.nor)/pdf;
 }
 
@@ -70,9 +67,6 @@ vec3 Li_DirectMIS(Ray ray) {
     if (dot(isect.Le, isect.Le) > 0.f) {
         return isect.Le;
     }
-    if (isect.t == INFINITY) {
-        return vec3(0.);
-    }
 
     vec3 wiW;
     vec3 woW = -ray.direction;
@@ -81,10 +75,15 @@ vec3 Li_DirectMIS(Ray ray) {
     vec3 directLight = Sample_Li(ray.origin + isect.t * ray.direction, isect.nor, wiW, pdf, chosenLightIdx, chosenLightID);
     vec3 f = f(isect, woW, wiW);
 
-    float brdfPdf = Pdf(isect, ray.direction, wiW);
-    float weight = PowerHeuristic(1, pdf, 1, brdfPdf);
-    if (pdf > 0.f) {
-        accumLight += weight*f*directLight*AbsDot(wiW, isect.nor)/pdf;
+    Ray testRay = SpawnRay(ray.origin + isect.t * ray.direction, wiW);
+    Intersection testIsect = sceneIntersect(testRay);
+
+    if (testIsect.t != INFINITY) {
+        if (pdf > 0.f) {
+            float brdfPdf = Pdf(isect, ray.direction, wiW);
+            float weight = PowerHeuristic(1, pdf, 1, brdfPdf);
+            accumLight += weight*f*directLight*AbsDot(wiW, isect.nor)/pdf;
+        }
     }
 
     //ray2
@@ -94,30 +93,27 @@ vec3 Li_DirectMIS(Ray ray) {
     int sampledType;
     vec3 f2 = Sample_f(isect, woW, xi, wiW, pdf, sampledType);
 
-    if (dot(isect.Le, isect.Le) > 0.f) {
-        accumLight += isect.Le;
+    if(pdf == 0.0f) {
         return accumLight;
     }
+    wiW = normalize(wiW);
+    testRay = SpawnRay(ray.origin + isect.t * ray.direction, wiW);
+    testIsect = sceneIntersect(testRay);
 
-    Ray testRay = SpawnRay(ray.origin + isect.t * ray.direction, wiW);
-    Intersection testIsect = sceneIntersect(testRay);
-
-    if (testIsect.t == INFINITY) {
-        return vec3(0.f);
-    }
-    if (pdf > 0.f) {
-        float lightPdf = Pdf_Li(ray.origin + isect.t * ray.direction, isect.nor, wiW, chosenLightIdx);
-        float weight2 = 1.f;
-        vec3 light2 = vec3(0.f);
+    float weight2 = 1.f;
+    vec3 light2 = vec3(0.);
+    float lightPdf = Pdf_Li(ray.origin + isect.t * ray.direction, isect.nor, wiW, chosenLightIdx);
+    if (lightPdf > 0.f) {
 
         weight2 = PowerHeuristic(1, pdf, 1, lightPdf);
-        if (dot(testIsect.Le, testIsect.Le) > 0.f) {
-            light2 = testIsect.Le;
+        if (testIsect.t != INFINITY) {
+            if (dot(testIsect.Le, testIsect.Le) > 0.f) {
+                light2 = testIsect.Le;
+            }
         }
-
-        accumLight += weight2*f2*light2*AbsDot(wiW, isect.nor)/pdf;
     }
 
+    accumLight += weight2*f2*light2*AbsDot(wiW, isect.nor)/pdf;
     return accumLight;
 }
 

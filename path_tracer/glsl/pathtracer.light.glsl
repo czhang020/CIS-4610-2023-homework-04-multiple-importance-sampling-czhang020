@@ -46,7 +46,11 @@ vec3 DirectSampleAreaLight(int idx,
 
         float radius2 = distance(random_pt, view_point) * distance(random_pt, view_point);
         float costheta = max(dot(light_normal, -wiW), 0);
-        pdf *= radius2 / costheta;
+        if (costheta == 0.) {
+            pdf = 0;
+        } else {
+            pdf *= radius2 / costheta;
+        }
 
         Ray ray = SpawnRay(view_point, wiW);
         Intersection isect = sceneIntersect(ray);
@@ -258,8 +262,18 @@ float Pdf_Li(vec3 view_point, vec3 nor, vec3 wiW, int chosenLightIdx) {
             float pdf = float(1.f / area);
             wiW = normalize(random_pt - view_point);
 
+            Ray ray = SpawnRay(view_point, wiW);
+            Intersection isect = sceneIntersect(ray);
+
+            if (dot(isect.Le, isect.Le) <= 0.) {
+                return 0;
+            }
+
             float radius2 = distance(random_pt, view_point) * distance(random_pt, view_point);
             float costheta = max(dot(light_normal, -wiW), 0);
+            if (costheta == 0.) {
+                return 0;
+            }
             return pdf * radius2 / costheta;
         }
         else if(type == SPHERE) {
@@ -283,7 +297,10 @@ float Pdf_Li(vec3 view_point, vec3 nor, vec3 wiW, int chosenLightIdx) {
 
 float PowerHeuristic(int nf, float fPdf, int ng, float gPdf) {
     // TODO
-    if (fPdf == 0.f && gPdf == 0.f) return 0.f;
+    if (fPdf == 0.f && gPdf == 0.f) {
+        return 0.f;
+    }
+
     float f = nf * fPdf;
     float g = ng * gPdf;
 
